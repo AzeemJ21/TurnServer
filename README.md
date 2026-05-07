@@ -1,6 +1,6 @@
 # TURN server (coturn + Docker)
 
-Production-oriented [coturn](https://github.com/coturn/coturn) on the official [`coturn/coturn`](https://hub.docker.com/r/coturn/coturn) image. Credentials and realm live in `turnserver.conf` (long-term credentials / `lt-cred-mech`). The container starts **`turnserver`** explicitly with **`-c /etc/coturn/turnserver.conf`** (see `Dockerfile`).
+Production-oriented [coturn](https://github.com/coturn/coturn) on the official [`coturn/coturn`](https://hub.docker.com/r/coturn/coturn) image. Credentials and realm live in `turnserver.conf` (long-term credentials / `lt-cred-mech`). The **`Dockerfile` clears the stock `ENTRYPOINT`**, runs as **`root`** (the upstream image defaults to `nobody`, which can break exec/bind on some platforms), and starts **`/usr/bin/turnserver`** with **`-c /etc/coturn/turnserver.conf -n --log-file=stdout --simple-log`**.
 
 ## Built-in credentials (must match your WebRTC client)
 
@@ -76,6 +76,7 @@ Use your real Render host instead of `your-render-url.onrender.com`.
 
 | Symptom | Likely cause | What to try |
 |--------|----------------|-------------|
+| **`turnserver: Operation not permitted (exit 126)`** or container exits immediately | Upstream image runs as **`nobody`**; with **`ENTRYPOINT []`** the process can fail to exec or bind on some hosts | This repo sets **`USER root`** and invokes **`/usr/bin/turnserver`** explicitly. Redeploy after pull; confirm **`RUN test -x /usr/bin/turnserver`** passes at build time. |
 | ICE stays on `relay` failed or never connects | Wrong advertised address | Set **`TURN_EXTERNAL_IP`** to the correct **public** IPv4 used by clients to reach this host. |
 | Authentication errors (`401`, `nonce`, credential rejected) | Client/server mismatch | Client **`username` / `credential`** must match **`user=`** and **`realm=`** in `turnserver.conf`. |
 | UDP relay fails but TCP might work | Firewall / UDP range blocked | Open **UDP 3478** and **UDP 49152–65535** (or your configured relay range) on the host and any cloud security rules. |
