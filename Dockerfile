@@ -4,6 +4,14 @@ FROM coturn/coturn:4.10-alpine
 # non-root user can cause exec/bind issues on some hosts (e.g. exit 126 on Render).
 USER root
 
+# Upstream sets file capabilities on turnserver (CAP_NET_BIND_SERVICE). Some hosts
+# (e.g. Render) reject exec with "Operation not permitted". Strip caps; root can
+# bind :3478 without them.
+RUN apk add --no-cache libcap \
+ && setcap -r /usr/bin/turnserver \
+ && apk del libcap \
+ && rm -rf /var/cache/apk/*
+
 COPY turnserver.conf /etc/coturn/turnserver.conf
 
 # Sanity-check binary path (official install prefix is /usr).
